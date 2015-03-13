@@ -9,7 +9,8 @@
 
 <AnchorPane prefHeight="640.0" prefWidth="640.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="resources.MainController">
    <children>
-      <Canvas fx:id="image" height="335.0" layoutX="65.0" layoutY="35.0" width="511.0" />
+      <Canvas fx:id="image" height="600" layoutX="65.0" layoutY="35.0" width="1200" />
+      <Canvas fx:id="image2" height="335.0" layoutX="550" layoutY="35.0" width="511.0" />
       <Button fx:id="snap" layoutX="489.0" layoutY="408.0" mnemonicParsing="false" onAction="#onSnapTaken" text="Take image" />
       <GridPane alignment="CENTER" layoutX="65.0" layoutY="378.0" prefHeight="249.0" prefWidth="329.0">
         <columnConstraints>
