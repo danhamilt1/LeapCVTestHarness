@@ -22,7 +22,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.WritableImage;
 import javafx.util.Duration;
 
-import com.smashthestack.*;
+import com.leapcv.*;
 
 public class MainController {
 
