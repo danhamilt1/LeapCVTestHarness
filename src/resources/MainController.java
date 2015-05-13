@@ -7,6 +7,7 @@ import com.leapcv.utils.LeapCVMatcherType;
 import com.leapcv.utils.LeapCVStereoMatcher;
 import com.leapcv.utils.LeapCVStereoUtils;
 import javafx.animation.AnimationTimer;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -19,7 +20,10 @@ import javafx.scene.image.Image;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.Rect;
 import org.opencv.highgui.Highgui;
+
+import java.io.File;
 
 public class MainController {
 
@@ -27,8 +31,15 @@ public class MainController {
     Mat rightMat;
     Mat outMat;
     private double fpsValue;
+
+    private final String STEREO_VAR = "Stereo Variation";
+    private final String STEREO_SGBM = "StereoSGBM";
+    private final String STEREO_BM = "StereoBM";
+
     @FXML
     private Canvas leftCanvas;
+    @FXML
+    private Canvas objectDetectCanvas;
     @FXML
     private Canvas rightCanvas;
     @FXML
@@ -47,10 +58,17 @@ public class MainController {
     @FXML
     private CheckBox disparityCheck;
     @FXML
+    private CheckBox detectionCheck;
+
+    @FXML
+    private ChoiceBox disparityType;
+    @FXML
     private Button snap;
 
     @FXML
     private Label fps;
+    @FXML
+    private Button pointBtn;
 
     private LeapCVController leapController;
 
@@ -64,12 +82,17 @@ public class MainController {
             e.printStackTrace();
         }
 
-        //this.leapStereo = new LeapCVStereoUtils();
-//
-//		Platform.runLater(()->{
-//
-//		});
+        this.disparityType.getItems().addAll(STEREO_VAR, STEREO_SGBM, STEREO_BM);
+        this.disparityType.getSelectionModel().selectFirst();
 
+		Platform.runLater(() -> {
+            pointBtn.setVisible(false);
+            disparityType.setVisible(false);
+            outCanvas.setVisible(false);
+            objectDetectCanvas.setVisible(false);
+        });
+
+        //UI Timer for image refresh
         AnimationTimer timer = new AnimationTimer() {
 
             @Override
@@ -104,24 +127,55 @@ public class MainController {
             drawLeft(rightMat);
             drawRight(leftMat);
 
+            //Run based on selected UI checkboxes
             if (undist.isSelected()) {
                 leftMat = this.leapController.getLeftImageUndistorted();
                 rightMat = this.leapController.getRightImageUndistorted();
             }
 
+            //Median blur
             if (med.isSelected()) {
                 leftMat = this.medianExample(leftMat);
                 rightMat = this.medianExample(rightMat);
             }
 
+            //Gaussian blur
             if (gauss.isSelected()) {
                 leftMat = this.gaussianExample(leftMat);
                 rightMat = this.gaussianExample(rightMat);
             }
 
+            //Disparity map
             if(disparityCheck.isSelected()){
-                LeapCVStereoMatcher stereo = LeapCVStereoUtils.createMatcher(LeapCVMatcherType.STEREO_VAR);
-                outMat = stereo.compute(leftMat, rightMat);
+                LeapCVStereoMatcher stereo = null;
+                //Select stereo algorithm type from factory
+                switch((String)this.disparityType.getValue()){
+                    case STEREO_VAR:
+                        stereo = LeapCVStereoUtils.createMatcher(LeapCVMatcherType.STEREO_VAR);
+                        break;
+                    case STEREO_SGBM:
+                        stereo = LeapCVStereoUtils.createMatcher(LeapCVMatcherType.STEREO_SGBM);
+                        break;
+                    case STEREO_BM:
+                        stereo = LeapCVStereoUtils.createMatcher(LeapCVMatcherType.STEREO_BM);
+                        break;
+                }
+
+                outMat = stereo.compute(rightMat, leftMat);
+
+                //  Set visible items for disparity Map but only do it once
+                if (!pointBtn.isVisible()){
+                    pointBtn.setVisible(true);
+                    disparityType.setVisible(true);
+                    outCanvas.setVisible(true);
+                }
+
+            } else {
+                if (pointBtn.isVisible()) {
+                    pointBtn.setVisible(false);
+                    disparityType.setVisible(false);
+                    outCanvas.setVisible(false);
+                }
             }
 
             drawLeftProc(rightMat);
@@ -129,7 +183,26 @@ public class MainController {
 
             drawOut(outMat);
 
-            fps.setText(String.valueOf((int)this.fpsValue));
+            //objectDetection
+            if(detectionCheck.isSelected()) {
+
+                LeapCVObjectDetector det = new LeapCVObjectDetector();
+                drawObj(det.match(leftMat, Highgui.imread("/Volumes/macintosh_hdd/Users/daniel/Desktop/leapcv_op/toMatch.png")));
+                if(!objectDetectCanvas.isVisible()){
+                    objectDetectCanvas.setVisible(true);
+                }
+
+            } else {
+                if(objectDetectCanvas.isVisible()){
+                    objectDetectCanvas.setVisible(false);
+                }
+            }
+
+
+
+
+
+            fps.setText(String.valueOf((int) this.fpsValue));
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -139,12 +212,25 @@ public class MainController {
 
     @FXML
     void onSnapButton(ActionEvent event) {
-        Highgui.imwrite("/Volumes/macintosh_hdd/Users/daniel/Desktop/disp/dispSBGM/mugMatch3.png", outMat);
+
+        Highgui.imwrite("/Volumes/macintosh_hdd/Users/daniel/Desktop/leapcv_op/toMatch.png", LeapCVImageUtils.crop(leftMat, 0.2));
 
         //LeapCVStereoUtils utils = new LeapCVStereoUtils();
 
         //File file = new File("/Volumes/macintosh_hdd/Users/daniel/Desktop/outMat/dispSBGM/pc.obj");
         //utils.savePointCloud(utils.getPointCloud(outMat), file);
+    }
+
+    @FXML
+    void onPointButton(ActionEvent event) {
+        File toSave = new File("/Volumes/macintosh_hdd/Users/daniel/Desktop/leapcv_op/pointCloud.obj");
+        Mat pointCloud = new Mat();
+
+        Highgui.imwrite("/Volumes/macintosh_hdd/Users/daniel/Desktop/leapcv_op/pointcloud.bmp", leftMat);
+
+        System.out.println("Width: " + leftMat.width() + " Height: " + leftMat.height());
+        pointCloud = LeapCVStereoUtils.getPointCloud(outMat);
+        LeapCVStereoUtils.savePointCloud(pointCloud, toSave);
     }
 
     private void objectDetection() {
@@ -191,6 +277,13 @@ public class MainController {
         image.copyTo(out);
         Image outPut = LeapCVImageUtils.matToWritableImage(out, this.outCanvas.getWidth(), this.outCanvas.getHeight());
         this.outCanvas.getGraphicsContext2D().drawImage(outPut, 0, 0);
+    }
+
+    void drawObj(Mat image) {
+        Mat out = new Mat();
+        image.copyTo(out);
+        Image outPut = LeapCVImageUtils.matToWritableImage(out, this.objectDetectCanvas.getWidth(), this.objectDetectCanvas.getHeight());
+        this.objectDetectCanvas.getGraphicsContext2D().drawImage(outPut, 0, 0);
     }
 
     Mat gaussianExample(Mat image) {
