@@ -21,7 +21,7 @@ import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Rect;
-import org.opencv.highgui.Highgui;
+import org.opencv.imgcodecs.Imgcodecs;
 
 import java.io.File;
 
@@ -185,9 +185,8 @@ public class MainController {
 
             //objectDetection
             if(detectionCheck.isSelected()) {
-
                 LeapCVObjectDetector det = new LeapCVObjectDetector();
-                drawObj(det.match(leftMat, Highgui.imread("/Volumes/macintosh_hdd/Users/daniel/Desktop/leapcv_op/toMatch.png")));
+                drawObj(det.match(leftMat, Imgcodecs.imread(Paths.ROOT_PATH+"toMatch.png")));
                 if(!objectDetectCanvas.isVisible()){
                     objectDetectCanvas.setVisible(true);
                 }
@@ -213,7 +212,7 @@ public class MainController {
     @FXML
     void onSnapButton(ActionEvent event) {
 
-        Highgui.imwrite("/Volumes/macintosh_hdd/Users/daniel/Desktop/leapcv_op/toMatch.png", LeapCVImageUtils.crop(leftMat, 0.2));
+        Imgcodecs.imwrite(Paths.ROOT_PATH + "toMatch.png", LeapCVImageUtils.crop(leftMat, 0.2));
 
         //LeapCVStereoUtils utils = new LeapCVStereoUtils();
 
@@ -223,10 +222,10 @@ public class MainController {
 
     @FXML
     void onPointButton(ActionEvent event) {
-        File toSave = new File("/Volumes/macintosh_hdd/Users/daniel/Desktop/leapcv_op/pointCloud.obj");
+        File toSave = new File(Paths.ROOT_PATH + "pointCloud.obj");
         Mat pointCloud = new Mat();
 
-        Highgui.imwrite("/Volumes/macintosh_hdd/Users/daniel/Desktop/leapcv_op/pointcloud.bmp", leftMat);
+        Imgcodecs.imwrite(Paths.ROOT_PATH + "pointcloud.bmp", leftMat);
 
         System.out.println("Width: " + leftMat.width() + " Height: " + leftMat.height());
         pointCloud = LeapCVStereoUtils.getPointCloud(outMat);
